@@ -1,0 +1,30 @@
+RAW: title=persuasion&author=jane+austen&thumbnail=http%3A%2F%2Fbooks.google.com%2Fbooks%2Fcontent%3Fid%3DsUX-zAEACAAJ%26printsec%3Dfrontcover%26img%3D1%26zoom%3D1%26source%3Dgbs_api&type=favorite
+DECODED: 
+FALLBACK POST: Array
+(
+    [title] => persuasion
+    [author] => jane austen
+    [thumbnail] => http://books.google.com/books/content?id=sUX-zAEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api
+    [type] => favorite
+)
+
+RAW: title=%D8%AF%D9%87%D8%B4%D8%A9+%D8%A7%D9%84%D8%A2%D9%84%D9%87%D8%A9&author=Ben+Okri&thumbnail=http%3A%2F%2Fbooks.google.com%2Fbooks%2Fcontent%3Fid%3Dr1Knmr0g77MC%26printsec%3Dfrontcover%26img%3D1%26zoom%3D1%26edge%3Dcurl%26source%3Dgbs_api&type=favorite
+DECODED: 
+FALLBACK POST: Array
+(
+    [title] => دهشة الآلهة
+    [author] => Ben Okri
+    [thumbnail] => http://books.google.com/books/content?id=r1Knmr0g77MC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api
+    [type] => favorite
+)
+
+RAW: title=%D8%AF%D9%87%D8%B4%D8%A9+%D8%A7%D9%84%D8%A2%D9%84%D9%87%D8%A9&author=Ben+Okri&thumbnail=http%3A%2F%2Fbooks.google.com%2Fbooks%2Fcontent%3Fid%3Dr1Knmr0g77MC%26printsec%3Dfrontcover%26img%3D1%26zoom%3D1%26edge%3Dcurl%26source%3Dgbs_api&type=favorite
+DECODED: 
+FALLBACK POST: Array
+(
+    [title] => دهشة الآلهة
+    [author] => Ben Okri
+    [thumbnail] => http://books.google.com/books/content?id=r1Knmr0g77MC&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api
+    [type] => favorite
+)
+
