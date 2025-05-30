@@ -1,35 +1,29 @@
-<?php
+<?php/*
 session_start();
-if (!isset($_SESSION['user'])) {
+  if (!isset($_SESSION['user'])) {
     header("Location: login.html");
     exit();
-}
-
-include("connection.php");
-
-$email = $_SESSION['user'];
-$username = '';
-
-$sql = "SELECT username FROM users WHERE email = '$email' LIMIT 1";
-$result = mysqli_query($link, $sql);
-if ($row = mysqli_fetch_assoc($result)) {
+  }
+  include("connection.php");
+  $email = $_SESSION['user'];
+  $username = '';
+  $sql = "SELECT username FROM users WHERE email = '$email' LIMIT 1";
+  $result = mysqli_query($link, $sql);
+  if ($row = mysqli_fetch_assoc($result)) {
     $username = $row['username'];
-}
-
-$loginMessage = '';
-if (isset($_SESSION['login_message'])) {
+  }
+  $loginMessage = '';
+    if (isset($_SESSION['login_message'])) {
     $loginMessage = $_SESSION['login_message'];
     unset($_SESSION['login_message']);
-}
-
+  }
 // ✅ FETCH AND FILTER BOOKS
 $books = [];
 $uniqueBooks = [];
 $seenTitles = [];
-
-$apiUrl = "https://www.googleapis.com/books/v1/volumes?q=fiction&maxResults=12";
-$response = file_get_contents($apiUrl);
-if ($response !== false) {
+  $apiUrl = "https://www.googleapis.com/books/v1/volumes?q=fiction&maxResults=12";  
+  $response = file_get_contents($apiUrl);
+  if ($response !== false) {
     $data = json_decode($response, true);
     if (isset($data['items'])) {
         foreach ($data['items'] as $book) {
@@ -42,69 +36,211 @@ if ($response !== false) {
         // Limit to 6 unique books
         $uniqueBooks = array_slice($uniqueBooks, 0, 6);
     }
-} else {
-    echo '<div class="alert alert-danger">Failed to fetch book data.</div>';
-}
+  } else {
+  }*/
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Home - Book Recommendation System</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookNest</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./main.css" rel="stylesheet">
+  <style>
+    /* Responsive iframe styling */
+    .reviews-iframe-container {
+      margin: 2rem 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        overflow: hidden; /* hide any scrollbars */
+
+    }
+    
+    .reviews-iframe {
+      width: 100%;
+      height: 700px; /* Adjust based on your content */
+      border: none;
+      background: transparent;
+      overflow: hidden; /* hide any scrollbars */
+
+    }
+    @media (max-width: 768px) {
+      .reviews-iframe {
+        height: 700px; /* More vertical space on mobile */
+      }
+    }
+    /* ==========================
+   Genre Section via iframe
+   ========================== */
+    .genre-iframe-container {
+  margin: 2rem 0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+     .genre-iframe {
+  width: 100%;
+  height: 820px;    /* or whatever you prefer */
+  border: none;
+  overflow: hidden; /* hide any scrollbars */
+
+
+   }
+    @media (max-width: 768px) {
+  .genre-iframe {
+    height: 1200px;
+    }
+  }
+  .hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .hero video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    min-width: 100%;
+    min-height: 100%;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+  }
+  .unmute-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: none;                  /* hidden until needed */
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  </style>
 </head>
 <body>
-  <header>
-    <h2>Welcome, <?php echo $username; ?> !</h2>
-    <nav style="margin-top: 10px;">
-      <a href="home.php">Home</a> |
-      <a href="favorites.php">My Favorite</a> |
-      <a href="wishlist.php">Wishlist</a> |
-      <a href="logout.php">Logout</a>
-    </nav>
-  </header>
+  <!-- Navbar -->
+<div id="navbar-placeholder"></div>
+  <script>
+  fetch('nav.html')
+    .then(response => response.text())
+    .then(data => document.getElementById('navbar-placeholder').innerHTML = data);
+  </script>
+<!-- Hero Section -->
+<div class="hero">
+  <video
+    id="hero-video"
+    autoplay
+    muted             
+    loop
+    playsinline
+    preload="auto"
+  >
+    <source src="./hero.mp4" type="video/mp4">
+    Your browser doesn’t support HTML5 video.
+  </video>
+</div>
 
-  <?php if ($loginMessage): ?>
-    <div class="alert alert-success"><?php echo $loginMessage; ?></div>
-  <?php endif; ?>
 
-  <main>
-    <h3>Recommended Books:</h3>
-    <div class="book-list">
-      <?php foreach ($uniqueBooks as $book):
-        $volume = $book['volumeInfo'];
-        $title = $volume['title'] ?? 'Unknown Title';
-        $authors = $volume['authors'][0] ?? 'Unknown Author';
-        $thumbnail = $volume['imageLinks']['thumbnail'] ?? '';
-      ?>
-        <div class="book-card">
-          <?php if ($thumbnail): ?>
-            <img src="<?php echo $thumbnail; ?>" alt="Book Cover">
-          <?php endif; ?>
-          <h4><?php echo htmlspecialchars($title); ?></h4>
-          <p>By: <?php echo htmlspecialchars($authors); ?></p>
+  <div class="hero-text-overlay">
+    <h1 class="hero-title">
+      <span class="typewriter-text">Welcome to NextMovie</span>
+    </h1>  
+    <p class="hero-subtitle">Discover your next literary adventure</p>
+  </div>
+</div>
+<!-- Navbar Placeholder (if using separate nav.html) -->
+<div id="navbar-placeholder"></div>
+  <!-- Popular Picks Section -->
+  
 
-          <!-- ❤️ Add to Favorites -->
-          <form action="save_book.php" method="POST" style="display:inline;">
-            <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
-            <input type="hidden" name="author" value="<?php echo htmlspecialchars($authors); ?>">
-            <input type="hidden" name="thumbnail" value="<?php echo $thumbnail; ?>">
-            <input type="hidden" name="type" value="favorite">
-            <button type="submit" title="Add to Favorites" style="background:none; border:none; cursor:pointer;">❤️</button>
-          </form>
 
-          <!-- ➕ Add to Wishlist -->
-          <form action="save_book.php" method="POST" style="display:inline;">
-            <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
-            <input type="hidden" name="author" value="<?php echo htmlspecialchars($authors); ?>">
-            <input type="hidden" name="thumbnail" value="<?php echo $thumbnail; ?>">
-            <input type="hidden" name="type" value="wishlist">
-            <button type="submit" title="Add to Wishlist" style="background:none; border:none; cursor:pointer;">➕</button>
-          </form>
+  <!-- Explore by Genre Section -->
+  <div class="container-fluid py-5">
+    <div class="row">
+      <div class="col-12">
+        <div class="genre-iframe-container">
+         <iframe
+      src="genraSec.html"
+       class="genre-iframe"
+      loading="lazy"
+        allowfullscreen
+       scrolling="no"
+       style="overflow:hidden;">
+            </iframe>
         </div>
-      <?php endforeach; ?>
+      </div>
     </div>
-  </main>
-</body>
+  </div>
+
+<!-- Best Books This Month Section -->
+ <div id="includedContent"></div>
+ <!-- From Our Readers Section -->
+<div class="reviews-iframe-container">
+  <iframe src="randomreviews.html" 
+    loading="lazy"
+    frameborder="0"
+    allow="fullscreen"
+    class="reviews-iframe"
+  ></iframe>
+</div>
+<
+<script>
+
+  // Receive height updates and adjust iframe
+  window.addEventListener('message', (event) => {
+    // Security check - verify message origin if deployed
+    // if (event.origin !== "https://your-domain.com") return;
+    
+    if (event.data.type === 'reviewsHeight') {
+      const iframe = document.querySelector('.reviews-iframe');
+      iframe.style.height = `${event.data.height}px`;
+      
+      // Optional: Add smooth transition
+      iframe.style.transition = 'height 0.3s ease';
+    }
+  });
+  // Fallback: Set initial min-height
+  document.querySelector('.reviews-iframe').style.minHeight = '600px';
+  </script>
+  <!-- Bootstrap JS -->
+   
+  <script>
+    // Function to load the HTML content into a div
+   function loadHTML() {
+      fetch('./MonthlyRecomnd.html')
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('includedContent').innerHTML = data;
+        })
+        .catch(error => {
+          console.error('Error loading HTML:', error);
+        });
+
+    }
+    // Load HTML content when the page is loaded
+    window.onload = loadHTML;
+      // Add this new fetch call for the reviews section
+  </script>
+    <div id="footer-placeholder"></div>
+    
+  <script>
+    fetch('footer.html')
+      .then(response => response.text())
+      .then(html => {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const footerEl = temp.querySelector('footer');
+        document.getElementById('footer-placeholder').appendChild(footerEl);
+      })
+      .catch(err => console.error('Error loading footer:', err));
+  </script>
+  <script src="./MonthlyRecomnd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+ </body>
 </html>
