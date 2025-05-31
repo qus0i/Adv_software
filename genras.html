@@ -101,15 +101,19 @@
     .then(data => document.getElementById('navbar-placeholder').innerHTML = data);
 </script>
   <!-- Hero Section -->
-  <div class="hero-section">
+  <div class="hero">
   <video
-    id="transition-video"
-    width="100%"
-    muted
-    preload="auto"
+    id="hero-video"
+    autoplay
+    muted             
+    loop
     playsinline
-    style="object-fit: cover;"
-  ></video>
+    preload="auto"
+  >
+    <source src="./hero.mp4" type="video/mp4">
+    Your browser doesn’t support HTML5 video.
+  </video>
+</div>
 
   <div class="hero-text-overlay">
     <h1 class="hero-title">
