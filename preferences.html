@@ -40,426 +40,147 @@
       <img src="../All_IMAGES/rightimg.png" alt="Illustration of reading preferences" />
     </div>
   </section>
-  <!--
-  <script>
-    const interests = [
-      "Fantasy", "Science Fiction", "Mystery", "Romance", "Thriller",
-      "Hist Fiction", "Biography", "Science", "Business", "Self-Help"
-    ];
+  
+ <script>
+  const TMDB_API_KEY = '9b32dff126d03c467ad01d64bf95605d';
+  const MAX_MOVIES = 120;
+  const MOVIES_PER_PAGE = 20; // TMDb returns 20 movies per page
 
-    const interestsContainer = document.getElementById('interest-list');
-    const continueBtn = document.querySelector('.continue-btn');
-    let selectedInterests = [];
-
-    interests.forEach(interest => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'interest-btn';
-      button.textContent = interest;
-
-      button.addEventListener('click', () => {
-        if (button.classList.contains('selected')) {
-          button.classList.remove('selected');
-          selectedInterests = selectedInterests.filter(i => i !== interest);
-        } else {
-          if (selectedInterests.length < 6) {
-            button.classList.add('selected');
-            selectedInterests.push(interest);
-          }
-        }
-
-        updateFormFields();
-        continueBtn.disabled = selectedInterests.length === 0;
-      });
-
-      interestsContainer.appendChild(button);
-    });
-
-    function updateFormFields() {
-      const form = document.getElementById('genres-form');
-      // إزالة الحقول القديمة
-      form.querySelectorAll('input[name="genres[]"]').forEach(e => e.remove());
-
-      // إضافة حقول مخفية لكل اختيار
-      selectedInterests.forEach(genre => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'genres[]';
-        input.value = genre;
-        form.appendChild(input);
-      });
-    }
-</script>
--->
-<!--
-<script>
   const interestsContainer = document.getElementById('interest-list');
-const continueBtn = document.querySelector('.continue-btn');
-let selectedInterests = [];
-let currentPage = 0;
-const genresPerPage = 20;
-let pagedGenres = [];
+  const continueBtn = document.querySelector('.continue-btn');
+  let selectedInterests = [];
 
-function normalizeGenre(genre) {
-  genre = genre.toLowerCase().trim();
-  if (genre.length > 3 && genre.endsWith('s')) {
-    genre = genre.slice(0, -1);
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
-  return genre;
-}
 
-async function fetchGenresFromMultiplePages() {
-  const categoriesSet = new Set();
-  const originalGenresMap = new Map();
+  async function getGenresMap() {
+    const resp = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}`);
+    const data = await resp.json();
+    const map = new Map();
+    if (data.genres) {
+      data.genres.forEach(genre => {
+        map.set(genre.id, genre.name);
+      });
+    }
+    return map;
+  }
 
-  for (let start = 0; start < 120; start += 40) {
-    const url = `https://www.googleapis.com/books/v1/volumes?q=fiction&maxResults=40&startIndex=${start}`;
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
+  async function fetchMoviePages() {
+    const movieIDs = new Set();
+    let page = 1;
 
-      if (data.items) {
-        data.items.forEach(item => {
-          if (item.volumeInfo.categories) {
-            item.volumeInfo.categories.forEach(cat => {
-              if (cat.length <= 64) {
-                const normalized = normalizeGenre(cat);
-                if (!categoriesSet.has(normalized)) {
-                  categoriesSet.add(normalized);
-                  originalGenresMap.set(normalized, cat);
-                }
-              }
-            });
-          }
-        });
+    while (movieIDs.size < MAX_MOVIES && page <= 10) {
+      const url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&page=${page}`;
+      try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (Array.isArray(data.results)) {
+          data.results.forEach(movie => {
+            if (movieIDs.size < MAX_MOVIES) {
+              movieIDs.add({ id: movie.id, genres: movie.genre_ids });
+            }
+          });
+        }
+      } catch (err) {
+        console.error(`Failed fetching page ${page}:`, err);
+        break;
       }
-    } catch (error) {
-      console.error('Error fetching page', start / 40, error);
+      page++;
+      await sleep(300);
     }
+
+    return Array.from(movieIDs);
   }
 
-  return Array.from(categoriesSet).map(norm => originalGenresMap.get(norm));
-}
+  async function extractGenres(movieData, genreMap) {
+    const genreSet = new Set();
+    movieData.forEach(movie => {
+      movie.genres.forEach(gid => {
+        if (genreMap.has(gid)) {
+          genreSet.add(genreMap.get(gid));
+        }
+      });
+    });
+    return Array.from(genreSet);
+  }
 
-function animateGenresUpdate(newButtons) {
-  interestsContainer.style.transition = 'opacity 0.5s';
-  interestsContainer.style.opacity = 0;
-  setTimeout(() => {
-    interestsContainer.innerHTML = '';
-    newButtons.forEach(btn => interestsContainer.appendChild(btn));
-    interestsContainer.style.opacity = 1;
-  }, 500);
-}
-
-function updateButtonStates() {
-  // Update all buttons across all pages to reflect current selection state
-  const allButtons = document.querySelectorAll('.interest-btn:not(.nav-btn)');
-  allButtons.forEach(button => {
-    const isSelected = selectedInterests.includes(button.textContent);
-    const shouldBeDisabled = !isSelected && selectedInterests.length >= 6;
-    
-    if (isSelected) {
-      button.classList.add('selected');
-      button.disabled = false;
-    } else {
-      button.classList.remove('selected');
-      button.disabled = shouldBeDisabled;
-    }
-  });
-}
-
-function createButtonsForPage(page) {
-  const start = page * genresPerPage;
-  const end = start + genresPerPage;
-  const genresToShow = pagedGenres.slice(start, end);
-
-  const buttons = genresToShow.map(interest => {
+  function createGenreButton(genre) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'interest-btn';
-    button.textContent = interest;
-
-    const isSelected = selectedInterests.includes(interest);
-    const shouldBeDisabled = !isSelected && selectedInterests.length >= 6;
-
-    if (isSelected) {
-      button.classList.add('selected');
-    }
-    
-    button.disabled = shouldBeDisabled;
+    button.textContent = genre;
 
     button.addEventListener('click', () => {
       if (button.classList.contains('selected')) {
-        // Deselecting - remove from array
         button.classList.remove('selected');
-        selectedInterests = selectedInterests.filter(i => i !== interest);
+        selectedInterests = selectedInterests.filter(x => x !== genre);
       } else {
-        // Selecting - only if we have less than 6
         if (selectedInterests.length < 6) {
           button.classList.add('selected');
-          selectedInterests.push(interest);
+          selectedInterests.push(genre);
         }
       }
-      
-      updateFormFields();
-      updateButtonStates();
-      
-      // Enable continue button ONLY when exactly 6 genres are selected
-      continueBtn.disabled = selectedInterests.length !== 6;
+      syncHiddenFields();
+      refreshButtonStates();
+      continueBtn.disabled = selectedInterests.length === 0;
     });
 
     return button;
-  });
-
-  // Navigation buttons
-  if (pagedGenres.length > genresPerPage) {
-    if (page > 0) {
-      const backBtn = document.createElement('button');
-      backBtn.type = 'button';
-      backBtn.className = 'interest-btn nav-btn back-btn';
-      backBtn.textContent = '‹ Back';
-
-      backBtn.addEventListener('click', () => {
-        currentPage--;
-        if (currentPage < 0) currentPage = Math.floor((pagedGenres.length - 1) / genresPerPage);
-        const prevButtons = createButtonsForPage(currentPage);
-        animateGenresUpdate(prevButtons);
-      });
-
-      buttons.unshift(backBtn);
-    }
-
-    if ((page + 1) * genresPerPage < pagedGenres.length) {
-      const moreBtn = document.createElement('button');
-      moreBtn.type = 'button';
-      moreBtn.className = 'interest-btn nav-btn more-btn';
-      moreBtn.textContent = 'More genres/categories ›';
-
-      moreBtn.addEventListener('click', () => {
-        currentPage++;
-        if (currentPage * genresPerPage >= pagedGenres.length) {
-          currentPage = 0;
-        }
-        const nextButtons = createButtonsForPage(currentPage);
-        animateGenresUpdate(nextButtons);
-      });
-
-      buttons.push(moreBtn);
-    }
   }
 
-  return buttons;
-}
+  function syncHiddenFields() {
+    const form = document.getElementById('genres-form');
+    form.querySelectorAll('input[name="genres[]"]').forEach(el => el.remove());
 
-function updateFormFields() {
-  const form = document.getElementById('genres-form');
-  form.querySelectorAll('input[name="genres[]"]').forEach(e => e.remove());
+    selectedInterests.forEach(genre => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'genres[]';
+      input.value = genre;
+      form.appendChild(input);
+    });
+  }
 
-  selectedInterests.forEach(genre => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'genres[]';
-    input.value = genre;
-    form.appendChild(input);
-  });
-}
+  function refreshButtonStates() {
+    const allButtons = document.querySelectorAll('.interest-btn');
+    allButtons.forEach(btn => {
+      const isSelected = btn.classList.contains('selected');
+      const disableOther = !isSelected && selectedInterests.length >= 6;
+      btn.disabled = disableOther;
+    });
+  }
 
-// Initialize
-fetchGenresFromMultiplePages().then(categories => {
-  pagedGenres = categories;
-  const buttons = createButtonsForPage(currentPage);
-  animateGenresUpdate(buttons);
-  continueBtn.disabled = true; // Disabled until exactly 6 genres are selected
-});
+  function renderGenreButtons(genresArray) {
+    interestsContainer.innerHTML = '';
+    genresArray.forEach(genre => {
+      const btn = createGenreButton(genre);
+      interestsContainer.appendChild(btn);
+    });
+    continueBtn.disabled = true;
+  }
+
+  // Main
+  (async function initialize() {
+    const genreMap = await getGenresMap();
+    const movieData = await fetchMoviePages();
+
+    if (!movieData.length) {
+      interestsContainer.innerHTML = `<p style="color: red;">No movies found.</p>`;
+      return;
+    }
+
+    const allGenres = await extractGenres(movieData, genreMap);
+
+    if (!allGenres.length) {
+      interestsContainer.innerHTML = `<p style="color: red;">No genres found.</p>`;
+      return;
+    }
+
+    renderGenreButtons(allGenres);
+  })();
 </script>
--->
- <script>
-    // ————————————————
-    // CONFIGURATION
-    // ————————————————
-    const OMDB_API_KEY = 'a5e9534e';
-    const MAX_MOVIES = 120;
-    const SEARCH_QUERY = 'a'; // We’ll search movies containing “a” (common character) to maximize results
-    const MOVIES_PER_SEARCH_PAGE = 10; // OMDB search returns 10 results/page
 
-    // ————————————————
-    // DOM REFERENCES
-    // ————————————————
-    const interestsContainer = document.getElementById('interest-list');
-    const continueBtn = document.querySelector('.continue-btn');
-    let selectedInterests = [];
-
-    // ————————————————
-    // UTILITY: Pause for X milliseconds
-    // ————————————————
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // ————————————————
-    // STEP 1: Search OMDB pages 1…12 (or until we have 120 IDs)
-    // ————————————————
-    async function gatherMovieIDs() {
-      const allIDs = new Set();
-      let page = 1;
-      while (allIDs.size < MAX_MOVIES) {
-        const url = `https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&s=${encodeURIComponent(SEARCH_QUERY)}&type=movie&page=${page}`;
-        try {
-          const resp = await fetch(url);
-          const data = await resp.json();
-
-          if (data.Response === 'True' && Array.isArray(data.Search)) {
-            data.Search.forEach(item => {
-              if (allIDs.size < MAX_MOVIES) {
-                allIDs.add(item.imdbID);
-              }
-            });
-            // If fewer than 10 results, no more pages exist
-            if (data.Search.length < MOVIES_PER_SEARCH_PAGE) {
-              break;
-            }
-            page++;
-            // OMDB free tier may rate-limit; pause slightly between pages
-            await sleep(200);
-          } else {
-            // No more “True” responses, stop looping
-            break;
-          }
-        } catch (err) {
-          console.error(`Error searching page ${page}:`, err);
-          break;
-        }
-      }
-      return Array.from(allIDs).slice(0, MAX_MOVIES);
-    }
-
-    // ————————————————
-    // STEP 2: Given an array of IMDb IDs, fetch each movie’s details
-    // and collect all genres into a Set.
-    // ————————————————
-    async function fetchAllGenres(movieIDs) {
-      const genreSet = new Set();
-
-      // We’ll fetch in batches of 10 IDs at a time to keep it throttled
-      const BATCH_SIZE = 10;
-      for (let i = 0; i < movieIDs.length; i += BATCH_SIZE) {
-        const batchIDs = movieIDs.slice(i, i + BATCH_SIZE);
-
-        // Fire off all detail‐fetches in this batch concurrently
-        const batchPromises = batchIDs.map(id =>
-          fetch(`https://www.omdbapi.com/?apikey=${OMDB_API_KEY}&i=${id}`)
-            .then(r => r.json())
-            .catch(e => {
-              console.error(`Failed to fetch details for ${id}:`, e);
-              return null;
-            })
-        );
-
-        const batchResults = await Promise.all(batchPromises);
-
-        batchResults.forEach(movie => {
-          if (movie && movie.Response === 'True' && movie.Genre) {
-            movie.Genre.split(',').forEach(g => {
-              const trimmed = g.trim();
-              if (trimmed.length) {
-                genreSet.add(trimmed);
-              }
-            });
-          }
-        });
-
-        // Pause 300ms between batches to reduce risk of hitting rate limits
-        await sleep(300);
-      }
-
-      return Array.from(genreSet);
-    }
-
-    // ————————————————
-    // STEP 3: Create and attach a button for each genre
-    // ————————————————
-    function createGenreButton(genre) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'interest-btn';
-      button.textContent = genre;
-
-      button.addEventListener('click', () => {
-        if (button.classList.contains('selected')) {
-          // Deselect
-          button.classList.remove('selected');
-          selectedInterests = selectedInterests.filter(x => x !== genre);
-        } else {
-          if (selectedInterests.length < 6) {
-            button.classList.add('selected');
-            selectedInterests.push(genre);
-          }
-        }
-        syncHiddenFields();
-        refreshButtonStates();
-        continueBtn.disabled = selectedInterests.length === 0;
-      });
-
-      return button;
-    }
-
-    // Remove existing hidden inputs and create new ones based on selectedInterests
-    function syncHiddenFields() {
-      const form = document.getElementById('genres-form');
-      form.querySelectorAll('input[name="genres[]"]').forEach(el => el.remove());
-
-      selectedInterests.forEach(genre => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'genres[]';
-        input.value = genre;
-        form.appendChild(input);
-      });
-    }
-
-    // Enable/disable logic: only 6 selections max
-    function refreshButtonStates() {
-      const allButtons = document.querySelectorAll('.interest-btn');
-      allButtons.forEach(btn => {
-        const isSelected = btn.classList.contains('selected');
-        const disableOther = !isSelected && selectedInterests.length >= 6;
-        btn.disabled = disableOther;
-      });
-    }
-
-    // Render the final set of genre buttons into the container
-    function renderGenreButtons(genresArray) {
-      interestsContainer.innerHTML = '';
-      genresArray.forEach(genre => {
-        const btn = createGenreButton(genre);
-        interestsContainer.appendChild(btn);
-      });
-      continueBtn.disabled = true;
-    }
-
-    // ————————————————
-    // MAIN ENTRYPOINT
-    // ————————————————
-    (async function initialize() {
-      // 1. Gather up to 120 movie IDs from OMDB search pages
-      const movieIDs = await gatherMovieIDs();
-      if (movieIDs.length === 0) {
-        interestsContainer.innerHTML = `<p style="color: red;">No movies found via OMDB search.</p>`;
-        return;
-      }
-
-      // 2. Fetch detailed info for each ID and collect all genres
-      const allGenres = await fetchAllGenres(movieIDs);
-
-      if (allGenres.length === 0) {
-        interestsContainer.innerHTML = `<p style="color: red;">Could not extract any genres from those movies.</p>`;
-        return;
-      }
-
-      // 3. Render a button for each unique genre
-      renderGenreButtons(allGenres);
-    })();
-  </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
 

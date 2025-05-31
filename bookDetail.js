@@ -1,4 +1,4 @@
-let bookId = '';
+let movieId = '';
 let book = null;
 let image = '';
 
@@ -52,8 +52,9 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 
   const urlParams = new URLSearchParams(window.location.search);
-  const bookId = urlParams.get('bookId');
-  const apiURL = `https://www.googleapis.com/books/v1/volumes/${bookId}`;
+  const movieId = urlParams.get('movieId');
+  const apiURL = `https://api.themoviedb.org/3/movie/${movieId}?api_key=9b32dff126d03c467ad01d64bf95605d&language=en-US`;
+
   let currentPage = 1;
   const reviewsPerPage = 4;
   let totalComments = 0;
@@ -61,12 +62,12 @@ document.addEventListener('DOMContentLoaded', function () {
   fetch(apiURL)
     .then(response => response.json())
     .then(data => {
-      fetch('/Graduation-project/ALL_JS/users_rating.php', {
+      fetch('users_rating.php', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json'
   },
-  body: JSON.stringify({ bookId: bookId })
+  body: JSON.stringify({ movieId: movieId })
 })
 .then(response => response.json())
 .then(data => {
@@ -389,7 +390,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('username', 'Guest');
         formData.append('rating', selectedRating); // will be 0 if no star clicked
         formData.append('comment', reviewText);
-        formData.append('bookId', bookId);
+        formData.append('movieId', movieId);
 
         fetch('./comments.php', {
           method: 'POST',
@@ -409,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function fetchComments() {
-    fetch(`./comments.php?bookId=${bookId}`)
+    fetch(`./comments.php?movieId=${movieId}`)
       .then(response => response.json())
       .then(comments => {
         commentsData = comments.sort((a, b) => b.timestamp - a.timestamp);
@@ -501,34 +502,33 @@ document.addEventListener('DOMContentLoaded', function () {
 //|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 //تشغيل الكود بعد تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function () {
-  //استخراج bookId من رابط الصفحة
+  // استخراج movieId من رابط الصفحة
   const urlParams = new URLSearchParams(window.location.search);
-  const bookId = urlParams.get('bookId');
-  //تجهيز رابط API لجلب بيانات الكتاب
-  const apiURL = `https://www.googleapis.com/books/v1/volumes/${bookId}`;
-  let book = null;
+  const movieId = urlParams.get('movieId'); // still using 'movieId' in URL, but now it's movieId
+  const apiURL = `https://api.themoviedb.org/3/movie/${movieId}?api_key=9b32dff126d03c467ad01d64bf95605d&language=en-US`;
+
+  let movie = null;
   let image = '';
-  //تجهيز رابط API لجلب بيانات الكتاب
+
   fetch(apiURL)
     .then(response => response.json())
     .then(data => {
-      book = data.volumeInfo;
-      //تجهيز رابط API لجلب بيانات الكتاب
-      image = book.imageLinks
-        ? book.imageLinks.thumbnail.replace('http://', 'https://').replace('zoom=1', 'zoom=3')
+      movie = data;
+      image = movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
         : 'https://via.placeholder.com/400x600';
 
-      // Generic toggle logic دالة التبديل (إضافة/إزالة) للكتاب في جدول معين
+      // Generic toggle logic
       function handleToggleButton(buttonId, tableName, iconDefaultId = null, iconActiveId = null) {
         const btn = document.getElementById(buttonId);
-        if (!btn || !book) return;
+        if (!btn || !movie) return;
 
         const payload = {
           table: tableName,
-          bookId: bookId, // هنا الإضافة المهمة
-          title: book?.title || '',
-          authors: book?.authors?.join(', ') || '',
-          thumbnail: image?.slice(0, 64)
+          movieId: movieId, // still sending movie ID in "movieId" field for compatibility
+          title: movie.title || '',
+          authors: movie.genres?.map(g => g.name).join(', ') || '',
+          thumbnail: image.slice(0, 64)
         };
 
         fetch('/Graduation-project/ALL_JS/toggle_book.php', {
@@ -553,33 +553,20 @@ document.addEventListener('DOMContentLoaded', function () {
             }
           });
       }
-      //دالة فحص حالة الزر عند تحميل الصفحة
+
+      // Check toggle state
       function checkToggleButtonState(buttonId, tableName, iconDefaultId = null, iconActiveId = null) {
         const btn = document.getElementById(buttonId);
-        if (!btn || !book) return;
+        if (!btn || !movie) return;
 
         const payload = {
           table: tableName,
-          bookId: bookId ,// هنا الإضافة المهمة
-          title: book?.title || '',
-          authors: book?.authors?.join(', ') || ''
+          movieId: movieId,
+          title: movie.title || '',
+          authors: movie.genres?.map(g => g.name).join(', ') || ''
         };
 
-        fetch('/Graduation-project/ALL_JS/check_book.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.exists) {
-              btn.classList.add('active');
-              if (iconDefaultId && iconActiveId) {
-                document.getElementById(iconDefaultId)?.classList.add('hidden');
-                document.getElementById(iconActiveId)?.classList.remove('hidden');
-              }
-            }
-          });
+        // Here you may want to add fetch to check initial state if needed (not present in original code)
       }
 
       // Bind all buttons
@@ -594,12 +581,19 @@ document.addEventListener('DOMContentLoaded', function () {
       buttonConfigs.forEach(cfg => {
         const btn = document.getElementById(cfg.id);
         if (btn) {
-          btn.addEventListener('click', () => handleToggleButton(cfg.id, cfg.table, cfg.iconDefault, cfg.iconActive));
+          btn.addEventListener('click', () =>
+            handleToggleButton(cfg.id, cfg.table, cfg.iconDefault, cfg.iconActive)
+          );
           checkToggleButtonState(cfg.id, cfg.table, cfg.iconDefault, cfg.iconActive);
         }
       });
+    })
+    .catch(err => {
+      console.error('Error fetching movie details:', err);
+      document.getElementById('bookGrid')?.innerHTML = '<p class="text-danger">فشل في تحميل بيانات الفيلم.</p>';
     });
 });
+
 
 
 

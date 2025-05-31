@@ -159,130 +159,153 @@ width="60px" height="60px"
   </script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      const params = new URLSearchParams(window.location.search);
-      let selectedGenre = params.get('genre') || 'fiction';
-      const booksPerPage = 16;
-      let currentPage = 1;
-      let books = [];
+  document.addEventListener('DOMContentLoaded', async () => {
+    const TMDB_API_KEY = '9b32dff126d03c467ad01d64bf95605d';
+    const moviesPerPage = 8;
+    let selectedGenre = 'ALL';
+    let currentPage = 1;
+    let movies = [];
+    let genres = [];
+    let genreMap = new Map(); // genre name => TMDB id
 
-      const genresRes = await fetch('get_genres.php');
-      const genres = await genresRes.json();
-      const genreButtons = document.getElementById('genreButtons');
+    const genreButtons = document.getElementById('genreButtons');
 
-      const allBtn = document.createElement('button');
-      allBtn.className = `btn ${selectedGenre === 'ALL' ? 'active' : ''}`;
-      allBtn.textContent = 'ALL';
-      allBtn.onclick = () => {
-        selectedGenre = 'ALL';
+    // 1. Fetch genres from your database
+    const genresRes = await fetch('get_genres.php');
+    genres = await genresRes.json(); // Example: ["Action", "Comedy", "Drama", ...]
+
+    // 2. Fetch all TMDB genre IDs once and map them to names
+    const tmdbGenreRes = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}`);
+    const tmdbGenres = await tmdbGenreRes.json();
+    tmdbGenres.genres.forEach(g => genreMap.set(g.name, g.id));
+
+    // 3. Create "ALL" button
+    const allBtn = document.createElement('button');
+    allBtn.className = `btn ${selectedGenre === 'ALL' ? 'active' : ''}`;
+    allBtn.textContent = 'ALL';
+    allBtn.onclick = () => {
+      selectedGenre = 'ALL';
+      currentPage = 1;
+      fetchMovies();
+      updateActiveButton();
+    };
+    genreButtons.appendChild(allBtn);
+
+    // 4. Create genre buttons from DB genres
+    genres.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${name === selectedGenre ? 'active' : ''}`;
+      btn.textContent = name;
+      btn.onclick = () => {
+        selectedGenre = name;
         currentPage = 1;
-        fetchBooks();
+        fetchMovies();
         updateActiveButton();
       };
-      genreButtons.appendChild(allBtn);
-
-      genres.forEach(name => {
-        const btn = document.createElement('button');
-        btn.className = `btn ${name === selectedGenre ? 'active' : ''}`;
-        btn.textContent = name;
-        btn.onclick = () => {
-          selectedGenre = name;
-          currentPage = 1;
-          fetchBooks();
-          updateActiveButton();
-        };
-        genreButtons.appendChild(btn);
-      });
-
-      function updateActiveButton() {
-        document.querySelectorAll('#genreButtons button').forEach(btn => {
-          btn.classList.toggle('active', btn.textContent === selectedGenre);
-        });
-      }
-
-      async function fetchBooks() {
-        try {
-          let allBooks = [];
-
-          if (selectedGenre === 'ALL') {
-            const promises = genres.map(g =>
-              fetch(`https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(g)}&maxResults=8`)
-                .then(res => res.json())
-                .then(data => data.items || [])
-            );
-            const results = await Promise.all(promises);
-            allBooks = results.flat();
-          } else {
-            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(selectedGenre)}&maxResults=40`);
-            const data = await res.json();
-            allBooks = data.items || [];
-          }
-
-          books = allBooks.slice(0, 48);
-          renderBooks();
-          renderPagination();
-        } catch (err) {
-          document.getElementById('bookGrid').innerHTML = '<p class="text-danger">Failed to load recommendations.</p>';
-        }
-      }
-
-      function renderBooks() {
-        const bookGrid = document.getElementById('bookGrid');
-        bookGrid.innerHTML = '';
-        const start = (currentPage - 1) * booksPerPage;
-        const pageItems = books.slice(start, start + booksPerPage);
-
-        pageItems.forEach(book => {
-          const title = book.volumeInfo.title?.slice(0, 30) || 'No Title';
-          const authors = book.volumeInfo.authors?.join(', ').slice(0, 30) || 'Unknown';
-          const image = book.volumeInfo.imageLinks?.thumbnail || 'https://via.placeholder.com/150';
-          const rating = book.volumeInfo.averageRating || 0;
-
-
-          let starRating = '';
-          for (let i = 1; i <= 5; i++) {
-            starRating += `<span class=\"star ${i <= rating ? 'filled' : ''}\" data-rating=\"${rating.toFixed(1)}\">★</span>`;
-          }
-          const col = document.createElement('div');
-          col.className = 'col-md-3 col-sm-6';
-          col.innerHTML = `
-            <a href="book-detail.html?bookId=${book.id}" class="card-link text-decoration-none">
-              <div class="card">
-                <img src="${image}" class="card-img-top" loading="lazy" alt="${title}">
-                <div class="card-body">
-                  <h5 class="card-title card-link">${title}</h5>
-                  <p class="card-text card-link author">${authors}</p>
-                  <div class=\"stars\" data-rating=\"${rating}\">${starRating}</div>
-
-                  </div>
-              </div>
-            </a>`;
-          bookGrid.appendChild(col);
-        });
-      }
-
-      function renderPagination() {
-        const totalPages = Math.ceil(books.length / booksPerPage);
-        const container = document.getElementById('customReviewPagination');
-        container.innerHTML = '';
-
-        for (let i = 1; i <= totalPages; i++) {
-          const pageBtn = document.createElement('button');
-          pageBtn.className = `btn ${i === currentPage ? 'active' : ''}`;
-          pageBtn.textContent = i;
-          pageBtn.onclick = () => {
-            currentPage = i;
-            renderBooks();
-            renderPagination();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          };
-          container.appendChild(pageBtn);
-        }
-      }
-
-      fetchBooks();
+      genreButtons.appendChild(btn);
     });
-  </script>
+
+    function updateActiveButton() {
+      document.querySelectorAll('#genreButtons button').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === selectedGenre);
+      });
+    }
+
+    async function fetchMovies() {
+      try {
+        let allMovies = [];
+
+        if (selectedGenre === 'ALL') {
+          const promises = genres.map(name => {
+            const id = genreMap.get(name);
+            if (!id) return []; // skip invalid genres
+            return fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${id}&page=1`)
+              .then(res => res.json())
+              .then(data => data.results || []);
+          });
+          const results = await Promise.all(promises);
+          allMovies = results.flat();
+        } else {
+          const genreId = genreMap.get(selectedGenre);
+          const res = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreId}&page=1`);
+          const data = await res.json();
+          allMovies = data.results || [];
+        }
+
+        movies = allMovies.slice(0, 48);
+        renderMovies();
+        renderPagination();
+      } catch (err) {
+        document.getElementById('bookGrid').innerHTML = '<p class="text-danger">Failed to load recommendations.</p>';
+        console.error(err);
+      }
+    }
+
+    function renderMovies() {
+      const bookGrid = document.getElementById('bookGrid');
+      bookGrid.innerHTML = '';
+      const start = (currentPage - 1) * moviesPerPage;
+      const pageItems = movies.slice(start, start + moviesPerPage);
+
+      pageItems.forEach(movie => {
+        const title = movie.title?.slice(0, 30) || 'No Title';
+        const image = movie.poster_path
+          ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
+          : 'https://via.placeholder.com/150';
+        const rating = movie.vote_average || 0;
+
+        let starRating = '';
+        for (let i = 1; i <= 5; i++) {
+          starRating += `<span class="star ${i <= rating / 2 ? 'filled' : ''}" data-rating="${rating.toFixed(1)}">★</span>`;
+        }
+
+        const col = document.createElement('div');
+        col.className = 'col-md-3 col-sm-6';
+        col.innerHTML = `
+          <a href="book-detail.html?movieId=${movie.id}" class="card-link text-decoration-none">
+            <div class="card">
+              <img src="${image}" class="card-img-top" loading="lazy" alt="${title}">
+              <div class="card-body">
+                <h5 class="card-title">${title}</h5>
+                <p class="card-text">Rating: ${rating.toFixed(1)} / 10</p>
+                <div class="stars">${starRating}</div>
+              </div>
+            </div>
+          </a>`;
+        bookGrid.appendChild(col);
+      });
+    }
+
+    function renderPagination() {
+      const totalPages = Math.ceil(movies.length / moviesPerPage);
+      const container = document.getElementById('customReviewPagination');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `btn ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => {
+          currentPage = i;
+          renderMovies();
+          renderPagination();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        container.appendChild(pageBtn);
+      }
+    }
+
+    // Initial fetch
+    fetchMovies();
+  });
+</script>
+
+
+
+  
+
+
+      
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

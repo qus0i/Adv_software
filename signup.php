@@ -37,11 +37,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $_SESSION['username'] = $username;
         $_SESSION['user_id'] = $user_id;
 
-        header("Location: home.php");
+        header("Location: preferences.html");
         exit();
     } else {
         $_SESSION['error'] = "Something went wrong. Please try again.";
-        header("Location: register.html");
+        header("Location: registe.r.html");
         exit();
     }
 } else {

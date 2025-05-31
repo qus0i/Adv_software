@@ -57,7 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 } else {
     // 🚫 No direct GET access
-    header("Location: index.html");
+    header("Location: first.html");
     exit();
 }
 ?>
