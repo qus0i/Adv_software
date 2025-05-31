@@ -189,7 +189,6 @@ $seenTitles = [];
     class="reviews-iframe"
   ></iframe>
 </div>
-<
 <script>
 
   // Receive height updates and adjust iframe
