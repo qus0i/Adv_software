@@ -561,7 +561,7 @@ header {
 }
 
 .continue-btn {
-    background-color: var(--color-accent);
+    background-color: var(--color-primary-light);
     color: var(--color-primary-dark);
     border: none;
 }
@@ -572,7 +572,7 @@ header {
 }
 
 .continue-btn:disabled {
-    background-color: rgba(193, 123, 54, 0.5);
+    background-color: #880d1e80;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
