@@ -1572,7 +1572,7 @@ margin-top: 50px;
       right: 0;
       text-align: center;
       color:var(--color-primary-dark);
-      font-size: 1rem; /* Reduced font size */
+      font-size: 1rem;
       font-weight: bold;
       padding-left: 1rem;
       padding-right: 1rem;
